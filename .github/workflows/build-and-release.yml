@@ -45,11 +45,19 @@ jobs:
         with:
           node-version: '20' # Use a recent LTS version
 
-      # 3. Install your dependencies (electron, electron-builder)
+      # 3. NEW: Install Linux build dependencies
+      # This step only runs on the Linux job
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot dpkg
+
+      # 4. Install your dependencies (electron, electron-builder)
       - name: Install dependencies
         run: npm install
 
-      # 4. Build the app (e.g., "npm run pack:win")
+      # 5. Build the app (e.g., "npm run pack:win")
       - name: Build app
         run: ${{ matrix.build_cmd }}
         env:
@@ -57,7 +65,7 @@ jobs:
           # It disables code signing, which would otherwise fail.
           CSC_IDENTITY_AUTO_DISCOVERY: false
           
-      # 5. Upload the built file (.exe, .dmg, .AppImage) to the release
+      # 6. Upload the built file (.exe, .dmg, .AppImage) to the release
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
