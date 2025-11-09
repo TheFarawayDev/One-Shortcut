@@ -1,0 +1,35 @@
+{
+  "name": "one-shortcut",
+  "version": "1.1.0",
+  "description": "A cross-platform shortcut launcher with auto-start.",
+  "main": "main.js",
+  "author": "Your Name",
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "electron-builder --win",
+    "pack:mac": "electron-builder --mac",
+    "pack:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^31.0.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.yourname.oneshortcut",
+    "productName": "One Shortcut",
+    "files": [
+      "main.js",
+      "preload.js",
+      "one_shortcut.html"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "portable"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

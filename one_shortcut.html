@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en" class="dark"> <!-- Always dark mode -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co;">
+    <title>One Shortcut</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <style>
+        :root {
+            --color-accent: #3b82f6; /* Default: blue-500 */
+            --color-accent-hover: #2563eb; /* Default: blue-600 */
+            --color-accent-text: #ffffff; /* Default: white */
+        }
+        body {
+            background-color: #111827;
+            color: #f3f4f6;
+            background-image: radial-gradient(circle at 1px 1px, rgba(209, 213, 219, 0.1) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+        .sidebar { background-color: #1f2937; }
+        .sidebar-item { color: #d1d5db; }
+        .sidebar-item:hover { background-color: #374151; }
+        .input-bg { background-color: #374151; }
+        .border-color { border-color: #374151; }
+        .text-color-light { color: #9ca3af; }
+        .text-color-dark { color: #d1d5db; }
+        .text-color-heading { color: #ffffff; }
+
+        .glass-panel {
+            background-color: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .bg-accent { background-color: var(--color-accent); }
+        .text-accent { color: var(--color-accent); }
+        .border-accent { border-color: var(--color-accent); }
+        .hover\:bg-accent-hover:hover { background-color: var(--color-accent-hover); }
+        
+        .sidebar-item.active {
+            background-color: #4b5563;
+            color: #ffffff;
+        }
+        .sidebar-item.active svg { color: #ffffff; }
+        
+        * { transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+
+        #notification-modal { transition: opacity 0.3s ease, transform 0.3s ease; }
+        #notification-modal.hidden {
+            opacity: 0;
+            transform: scale(0.95) translateY(-20px);
+            pointer-events: none;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        input[readonly].path-input {
+            background-color: #374151;
+            color: #9ca3af;
+            border-color: #374151;
+            cursor: default;
+        }
+        
+        /* NEW: Styles for the toggle switch */
+        .toggle-bg:after {
+            content: '';
+            @apply absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform shadow-sm;
+        }
+        input:checked + .toggle-bg:after {
+            transform: translateX(100%);
+            @apply border-white;
+        }
+        input:checked + .toggle-bg {
+            @apply bg-accent border-accent;
+        }
+
+    </style>
+</head>
+<body class="font-sans antialiased overflow-hidden">
+
+    <div class="flex h-screen w-full">
+
+        <!-- ===== Sidebar ===== -->
+        <aside class="sidebar w-64 flex-shrink-0 shadow-lg overflow-y-auto flex flex-col z-20">
+            <div class="p-4 border-b border-color">
+                <h1 class="text-xl font-bold flex items-center gap-2 text-color-heading">
+                    <i data-lucide="layout-grid" class="text-accent"></i>
+                    <span>One Shortcut</span>
+                </h1>
+            </div>
+            <nav class="p-2 flex-1" id="shortcut-list-nav">
+                <h2 class="px-2 py-1 text-xs font-semibold text-color-light uppercase tracking-wider">Shortcuts</h2>
+                <ul id="shortcut-list-ui" class="mt-1"></ul>
+            </nav>
+            <nav class="p-2 mt-auto border-t border-color">
+                <h2 class="px-2 py-1 text-xs font-semibold text-color-light uppercase tracking-wider">Manage</h2>
+                <ul class="mt-1">
+                    <li>
+                        <a href="#" id="nav-add-shortcut" class="sidebar-item flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium">
+                            <i data-lucide="plus-circle" class="w-5 h-5 text-gray-400"></i>
+                            <span>Add Shortcut</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-settings" class="sidebar-item flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium">
+                            <i data-lucide="settings" class="w-5 h-5 text-gray-400"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- ===== Main Panel ===== -->
+        <main id="main-panel" class="flex-1 overflow-y-auto relative">
+            <!-- JS will populate -->
+        </main>
+    </div>
+
+    <!-- ===== Notification Modal ===== -->
+    <div id="notification-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="glass-panel max-w-sm w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-lg font-semibold text-color-heading">Notification</h3>
+                <button id="modal-close-icon" class="text-color-light hover:text-color-dark">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p id="modal-message" class="text-sm text-color-dark mb-6">
+                This is a notification message.
+            </p>
+            <button id="modal-close-btn" class="w-full bg-accent text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-accent-hover">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ===== JavaScript Logic ===== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const state = {
+                shortcuts: [],
+                settings: { 
+                    accentColor: '#3b82f6',
+                    autoStart: false // NEW default setting
+                },
+                activeView: 'welcome',
+                selectedShortcutId: null
+            };
+
+            // --- Element Selectors ---
+            const mainPanel = document.getElementById('main-panel');
+            const shortcutListUI = document.getElementById('shortcut-list-ui');
+            const navSettings = document.getElementById('nav-settings');
+            const navAddShortcut = document.getElementById('nav-add-shortcut');
+            const modal = document.getElementById('notification-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const modalCloseIcon = document.getElementById('modal-close-icon');
+
+            // --- Default Data ---
+            const defaultShortcuts = [
+                {
+                    id: '1',
+                    name: 'Notepad (Windows)',
+                    iconUrl: 'https://placehold.co/100x100/3b82f6/white?text=TXT',
+                    bannerUrl: 'https://placehold.co/800x200/3b82f6/white?text=Notepad',
+                    path: 'C:\\Windows\\System32\\notepad.exe',
+                    description: 'A test shortcut for Windows. This will fail on Mac/Linux.',
+                    isRunning: false
+                },
+                {
+                    id: '2',
+                    name: 'TextEdit (macOS)',
+                    iconUrl: 'https://placehold.co/100x100/8b5cf6/white?text=App',
+                    bannerUrl: 'https://placehold.co/800x200/8b5cf6/white?text=TextEdit',
+                    path: '/System/Applications/TextEdit.app',
+                    description: 'A test shortcut for macOS. This will fail on Windows/Linux.',
+                    isRunning: false
+                },
+                {
+                    id: '3',
+                    name: 'Google (Web)',
+                    iconUrl: 'https://placehold.co/100x100/ef4444/white?text=Web',
+                    bannerUrl: 'https://placehold.co/800x200/ef4444/white?text=Google',
+                    path: 'https://www.google.com',
+                    description: 'A web link. This should work on all operating systems.',
+                    isRunning: false
+                }
+            ];
+
+            // --- Utility Functions ---
+            function saveState() {
+                localStorage.setItem('oneShortcutSettings', JSON.stringify(state.settings));
+                localStorage.setItem('oneShortcutShortcuts', JSON.stringify(state.shortcuts));
+            }
+
+            function loadState() {
+                const settings = localStorage.getItem('oneShortcutSettings');
+                const shortcuts = localStorage.getItem('oneShortcutShortcuts');
+                
+                if (settings) {
+                    // Merge saved settings with defaults to ensure new settings are added
+                    state.settings = { ...state.settings, ...JSON.parse(settings) };
+                }
+                if (shortcuts) {
+                    state.shortcuts = JSON.parse(shortcuts);
+                } else {
+                    state.shortcuts = defaultShortcuts;
+                }
+                
+                if (state.shortcuts.length > 0) {
+                    state.activeView = 'shortcut';
+                    state.selectedShortcutId = state.shortcuts[0].id;
+                } else {
+                    state.activeView = 'welcome';
+                }
+            }
+
+            function applySettings() {
+                const accent = state.settings.accentColor;
+                let hover;
+                try { hover = pSBC(-0.1, accent); } catch(e) { hover = accent; }
+                document.documentElement.style.setProperty('--color-accent', accent);
+                document.documentElement.style.setProperty('--color-accent-hover', hover);
+                const accentTextColor = getContrastYIQ(accent);
+                document.documentElement.style.setProperty('--color-accent-text', accentTextColor);
+            }
+
+            // --- NEW: Sync auto-start setting with backend ---
+            async function syncAutoStartSetting(isEnabled) {
+                 if (window.electronAPI) {
+                    try {
+                        const result = await window.electronAPI.setAutoStart(isEnabled);
+                        console.log(result.message);
+                    } catch (error) {
+                        console.error('Failed to sync auto-start setting:', error);
+                        // Don't show a modal, it would be annoying on startup
+                    }
+                 }
+            }
+
+            function showNotification(title, message) {
+                modalTitle.textContent = title;
+                modalMessage.innerHTML = message;
+                modal.classList.remove('hidden');
+            }
+
+            function hideNotification() {
+                modal.classList.add('hidden');
+            }
+
+            // --- Render Functions ---
+
+            function renderSidebarList() {
+                shortcutListUI.innerHTML = '';
+                if (state.shortcuts.length === 0) {
+                    shortcutListUI.innerHTML = `<li class="px-3 py-2 text-sm text-color-light">No shortcuts yet.</li>`;
+                }
+                state.shortcuts.forEach(shortcut => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <a href="#" data-id="${shortcut.id}" class="sidebar-item flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium">
+                            <img src="${shortcut.iconUrl}" onerror="this.src='https://placehold.co/32x32/gray/white?text=%3F'" class="w-6 h-6 rounded-md object-cover flex-shrink-0">
+                            <span class="truncate">${shortcut.name}</span>
+                        </a>
+                    `;
+                    shortcutListUI.appendChild(li);
+                });
+                updateSidebarActiveState();
+            }
+            
+            function updateSidebarActiveState() {
+                document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+                let activeEl;
+                if (state.activeView === 'shortcut') activeEl = document.querySelector(`.sidebar-item[data-id="${state.selectedShortcutId}"]`);
+                else if (state.activeView === 'settings') activeEl = navSettings;
+                else if (state.activeView === 'add') activeEl = navAddShortcut;
+                if (activeEl) activeEl.classList.add('active');
+            }
+
+            function renderMainPanel() {
+                mainPanel.innerHTML = '';
+                switch (state.activeView) {
+                    case 'shortcut': renderShortcutView(); break;
+                    case 'settings': renderSettingsView(); break;
+                    case 'add': renderAddShortcutView(); break;
+                    case 'welcome':
+                    default: renderWelcomeView(); break;
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                updateSidebarActiveState();
+            }
+
+            function renderWelcomeView() {
+                mainPanel.innerHTML = `
+                    <div class="h-full flex items-center justify-center p-8">
+                        <div class="glass-panel p-10 text-center">
+                            <i data-lucide="layout-grid" class="w-16 h-16 text-accent mb-4 inline-block"></i>
+                            <h2 class="text-2xl font-semibold mb-2 text-color-heading">Welcome to One Shortcut</h2>
+                            <p class="text-color-dark max-w-md">
+                                Select a shortcut from the list on the left, or add a new one to get started.
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderShortcutView() {
+                const shortcut = state.shortcuts.find(s => s.id === state.selectedShortcutId);
+                if (!shortcut) { state.activeView = 'welcome'; renderWelcomeView(); return; }
+                mainPanel.innerHTML = `
+                    <div class="w-full">
+                        <div class="h-96 w-full relative overflow-hidden">
+                            <img src="${shortcut.bannerUrl}" 
+                                 onerror="this.src='https://placehold.co/800x200/gray/white?text=Banner+Not+Found'" 
+                                 alt="Banner" 
+                                 class="absolute inset-0 w-full h-full object-cover filter blur-lg brightness-50 scale-110">
+                            <div class="absolute inset-0 flex flex-col justify-end p-6 md:p-10 bg-gradient-to-t from-gray-900 via-gray-900/70 to-transparent">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                    <div class="flex items-center gap-4 min-w-0">
+                                        <img src="${shortcut.iconUrl}" 
+                                             onerror="this.src='https://placehold.co/100x100/gray/white?text=%3F'" 
+                                             alt="Icon" 
+                                             class="w-16 h-16 md:w-20 md:h-20 rounded-lg shadow-md object-cover flex-shrink-0">
+                                        <div class="min-w-0">
+                                            <h2 class="text-2xl md:text-3xl font-bold text-color-heading truncate">${shortcut.name}</h2>
+                                            <code class="text-sm text-color-light truncate block">${shortcut.path}</code>
+                                        </div>
+                                    </div>
+                                    <div id="button-container" class="flex-shrink-0 mt-4 sm:mt-0">
+                                        ${shortcut.isRunning ? `
+                                            <button id="stop-button" data-id="${shortcut.id}" class="flex-shrink-0 bg-red-600 text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-red-700 flex items-center justify-center gap-2 shadow-lg w-full sm:w-auto">
+                                                <i data-lucide="square" class="w-5 h-5"></i>
+                                                <span>Stop</span>
+                                            </button>
+                                        ` : `
+                                            <button id="launch-button" data-id="${shortcut.id}" data-path="${shortcut.path}" class="flex-shrink-0 bg-accent text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-accent-hover flex items-center justify-center gap-2 shadow-lg w-full sm:w-auto">
+                                                <i data-lucide="play" class="w-5 h-5"></i>
+                                                <span>Launch</span>
+                                            </button>
+                                        `}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 md:p-10">
+                            <div class="glass-panel p-6 max-w-4xl mx-auto">
+                                <h3 class="text-lg font-semibold text-color-heading mb-3">Description</h3>
+                                <p class="text-sm text-color-dark mb-6 whitespace-pre-wrap">${shortcut.description || 'No description provided.'}</p>
+                                <div class="mt-6 border-t border-color pt-6">
+                                     <button id="delete-shortcut-button" data-id="${shortcut.id}" class="text-sm text-red-500 hover:text-red-400 flex items-center gap-2">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        Delete Shortcut
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderSettingsView() {
+                const colorSwatches = ['#3b82f6', '#10b981', '#ef4444', '#eab308', '#8b5cf6', '#ec4899'];
+                mainPanel.innerHTML = `
+                    <div class="p-6 md:p-10">
+                        <div class="glass-panel max-w-2xl mx-auto p-6">
+                            <h2 class="text-2xl font-bold text-color-heading mb-6">Settings</h2>
+                            <form id="settings-form" class="space-y-6">
+                                <!-- Accent Color -->
+                                <div>
+                                    <label class="block text-sm font-medium text-color-dark mb-2">Accent Color</label>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        ${colorSwatches.map(color => `
+                                            <label class="cursor-pointer">
+                                                <input type="radio" name="accent-color-swatch" value="${color}" class="sr-only" ${state.settings.accentColor === color ? 'checked' : ''}>
+                                                <span class="block w-8 h-8 rounded-full border-2 ${state.settings.accentColor === color ? 'border-accent ring-2 ring-accent ring-offset-gray-900' : 'border-transparent'}" style="background-color: ${color};"></span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                    <input type="color" id="accent-color-picker" name="accent-color" value="${state.settings.accentColor}" class="w-20 h-10 p-0 border-none rounded-md cursor-pointer">
+                                </div>
+                                
+                                <!-- NEW: Auto-start Toggle -->
+                                <div>
+                                    <label class="block text-sm font-medium text-color-dark mb-2">App Behavior</label>
+                                    <label for="auto-start-toggle" class="flex items-center justify-between cursor-pointer">
+                                        <span class="flex-grow flex flex-col">
+                                            <span class="text-sm font-medium text-color-dark">Auto-start on login</span>
+                                            <span class="text-xs text-color-light">Start One Shortcut when you log into your computer.</span>
+                                        </span>
+                                        <div class="relative inline-flex items-center">
+                                            <input type="checkbox" id="auto-start-toggle" name="autoStart" class="sr-only" ${state.settings.autoStart ? 'checked' : ''}>
+                                            <div class="toggle-bg relative w-11 h-6 bg-gray-600 rounded-full border-2 border-gray-600 transition-colors"></div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="border-t border-color pt-5">
+                                    <button type="submit" class="bg-accent text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-hover">
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- Reset Data -->
+                            <div class="mt-10 border-t border-color pt-6">
+                                <h3 class="text-lg font-medium text-color-heading mb-2">Reset Data</h3>
+                                <p class="text-sm text-color-dark mb-4">This will delete all your shortcuts and reset settings to default.</p>
+                                <button id="reset-data-button" class="text-sm text-red-500 hover:text-red-400 flex items-center gap-2">
+                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                    Reset All Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function renderAddShortcutView() {
+                mainPanel.innerHTML = `
+                    <div class="p-6 md:p-10">
+                        <div class="glass-panel max-w-2xl mx-auto p-6">
+                            <h2 class="text-2xl font-bold text-color-heading mb-6">Add New Shortcut</h2>
+                            <form id="add-shortcut-form" class="space-y-4">
+                                <div>
+                                    <label for="shortcut-name" class="block text-sm font-medium text-color-dark">Name</label>
+                                    <input type="text" id="shortcut-name" name="name" required class="mt-1 block w-full rounded-md border-color shadow-sm input-bg focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="My Awesome App">
+                                </div>
+                                
+                                <div>
+                                    <label for="shortcut-path" class="block text-sm font-medium text-color-dark">File Path or Link</label>
+                                    <div class="mt-1 flex rounded-md shadow-sm">
+                                        <input type="text" id="shortcut-path" name="path" required readonly
+                                               class="path-input block w-full rounded-none rounded-l-md sm:text-sm" 
+                                               placeholder="Click 'Browse...' to select a file or app">
+                                        <button type="button" id="browse-file-btn" 
+                                                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-md px-3 py-2 text-sm font-semibold text-color-dark hover:bg-gray-600 border border-color">
+                                            <i data-lucide="folder-open" class="-ml-0.5 h-5 w-5 text-gray-400"></i>
+                                            Browse...
+                                        </button>
+                                    </div>
+                                    <p class="mt-1 text-xs text-color-light">You can also manually paste in a web link (e.g., https://...)</p>
+                                </div>
+                                
+                                <div>
+                                    <label for="shortcut-icon" class="block text-sm font-medium text-color-dark">Icon URL</label>
+                                    <input type="url" id="shortcut-icon" name="iconUrl" class="mt-1 block w-full rounded-md border-color shadow-sm input-bg focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="https://placehold.co/100x100">
+                                </div>
+                                <div>
+                                    <label for="shortcut-banner" class="block text-sm font-medium text-color-dark">Banner URL</label>
+                                    <input type="url" id="shortcut-banner" name="bannerUrl" class="mt-1 block w-full rounded-md border-color shadow-sm input-bg focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="https://placehold.co/800x200">
+                                </div>
+                                <div>
+                                    <label for="shortcut-description" class="block text-sm font-medium text-color-dark">Description</label>
+                                    <textarea id="shortcut-description" name="description" rows="4" class="mt-1 block w-full rounded-md border-color shadow-sm input-bg focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="Notes about this shortcut..."></textarea>
+                                </div>
+                                <div class="border-t border-color pt-5">
+                                    <button type="submit" class="bg-accent text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-hover">
+                                        Save Shortcut
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // --- Event Handlers ---
+
+            function handleSidebarClick(e) {
+                e.preventDefault();
+                const link = e.target.closest('a');
+                if (!link) return;
+                const shortcutId = link.dataset.id;
+                if (shortcutId) {
+                    state.activeView = 'shortcut';
+                    state.selectedShortcutId = shortcutId;
+                    renderMainPanel();
+                }
+            }
+            
+            function handleNavClick(e) {
+                 e.preventDefault();
+                 const target = e.target.closest('a');
+                 if (!target) return;
+                 if (target.id === 'nav-settings') state.activeView = 'settings';
+                 else if (target.id === 'nav-add-shortcut') state.activeView = 'add';
+                 renderMainPanel();
+            }
+            
+            async function handleMainPanelClick(e) {
+                const button = e.target.closest('button');
+                if (!button) return;
+                
+                if (button.id === 'browse-file-btn') {
+                    if (window.electronAPI) {
+                        try {
+                            const filePath = await window.electronAPI.openFile();
+                            if (filePath) {
+                                document.getElementById('shortcut-path').value = filePath;
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            showNotification('Error', `Failed to open file dialog: ${error.message}`);
+                        }
+                    } else {
+                        showNotification('Browser Mode', 'File browsing only works in the desktop app.');
+                    }
+                }
+
+                if (button.id === 'launch-button') {
+                    const path = button.dataset.path;
+                    const id = button.dataset.id;
+                    const shortcut = state.shortcuts.find(s => s.id === id);
+                    
+                    if (window.electronAPI) {
+                        try {
+                            const result = await window.electronAPI.launchShortcut(path);
+                            console.log(result.message);
+                            if (shortcut) {
+                                shortcut.isRunning = true;
+                                saveState();
+                                renderMainPanel();
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            showNotification('Launch Error', `Failed to launch: <br><strong>${path}</strong> <br><br>Error: ${error.message}`);
+                        }
+                    } else {
+                        showNotification('Browser Mode', 'Launching only works in the desktop app.');
+                    }
+                }
+                
+                if (button.id === 'stop-button') {
+                    const id = button.dataset.id;
+                    const shortcut = state.shortcuts.find(s => s.id === id);
+                    if (shortcut) {
+                        shortcut.isRunning = false;
+                        saveState();
+                        renderMainPanel();
+                    }
+                }
+                
+                if (button.id === 'delete-shortcut-button') {
+                    const idToDelete = button.dataset.id;
+                    const index = state.shortcuts.findIndex(s => s.id === idToDelete);
+                    if (index > -1) {
+                        state.shortcuts.splice(index, 1);
+                        saveState();
+                        renderSidebarList();
+                        if (state.shortcuts.length > 0) {
+                            state.selectedShortcutId = state.shortcuts[0].id;
+                            state.activeView = 'shortcut';
+                        } else {
+                            state.selectedShortcutId = null;
+                            state.activeView = 'welcome';
+                        }
+                        renderMainPanel();
+                    }
+                }
+                
+                if (button.id === 'reset-data-button') {
+                    showNotification('Confirm Reset', 'Are you sure you want to delete all data? This cannot be undone. <br><M <button id="confirm-reset-btn" class="mt-4 bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700">Yes, Reset All Data</button>');
+                    document.getElementById('confirm-reset-btn').onclick = () => {
+                        localStorage.clear();
+                        window.location.reload();
+                    };
+                }
+            }
+            
+            function handleFormSubmit(e) {
+                e.preventDefault();
+                const form = e.target;
+                
+                if (form.id === 'settings-form') {
+                    const formData = new FormData(form);
+                    state.settings.accentColor = formData.get('accent-color-swatch') || formData.get('accent-color');
+                    
+                    // NEW: Get auto-start value
+                    const autoStartEnabled = formData.has('autoStart');
+                    state.settings.autoStart = autoStartEnabled;
+                    
+                    applySettings();
+                    saveState();
+                    
+                    // NEW: Tell backend about the change
+                    syncAutoStartSetting(autoStartEnabled);
+                    
+                    showNotification('Settings Saved', 'Your preferences have been saved.');
+                    renderMainPanel();
+                }
+                
+                if (form.id === 'add-shortcut-form') {
+                    const formData = new FormData(form);
+                    const newShortcut = {
+                        id: Date.now().toString(),
+                        name: formData.get('name') || 'Untitled',
+                        path: formData.get('path') || 'No path',
+                        iconUrl: formData.get('iconUrl') || 'https://placehold.co/100x100/gray/white?text=%3F',
+                        bannerUrl: formData.get('bannerUrl') || 'https://placehold.co/800x200/gray/white?text=Banner',
+                        description: formData.get('description') || '',
+                        isRunning: false
+                    };
+                    state.shortcuts.push(newShortcut);
+                    saveState();
+                    renderSidebarList();
+                    state.activeView = 'shortcut';
+                    state.selectedShortcutId = newShortcut.id;
+                    renderMainPanel();
+                }
+            }
+            
+            function handleSettingsFormChange(e) {
+                if (e.target.id === 'accent-color-picker') {
+                    document.querySelectorAll('input[name="accent-color-swatch"]').forEach(sw => sw.checked = false);
+                    state.settings.accentColor = e.target.value;
+                    applySettings();
+                }
+                if (e.target.name === 'accent-color-swatch') {
+                    document.getElementById('accent-color-picker').value = e.target.value;
+                    state.settings.accentColor = e.target.value;
+                    applySettings();
+                }
+            }
+
+            // --- Color Helper Functions ---
+            function pSBC(p, c0, c1, l) {
+                let r, g, b, P, f, t, h, i = parseInt, m = Math.round, a = typeof (c1) == "string";
+                if (typeof (p) != "number" || p < -1 || p > 1) return null;
+                if (!c0 && c0 != 0) return null;
+                if (c0.length > 7) {
+                    f = c0.split(","); if (f.length < 3 || f.length > 4) return null; t = c0.split("(")[0]; if (t != "rgb" && t != "rgba") return null;
+                    c0 = [parseInt(f[0].split("(")[1]), parseInt(f[1]), parseInt(f[2])]; if (f.length == 4) c0.push(parseFloat(f[3]));
+                } else if (c0.length == 4) {
+                    if (c0[0] != "#") return null; c0 = [parseInt(c0.slice(1, 2) + c0.slice(1, 2), 16), parseInt(c0.slice(2, 3) + c0.slice(2, 3), 16), parseInt(c0.slice(3, 4) + c0.slice(3, 4), 16)];
+                } else {
+                    if (c0[0] != "#") return null; c0 = [parseInt(c0.slice(1, 3), 16), parseInt(c0.slice(3, 5), 16), parseInt(c0.slice(5, 7), 16)];
+                }
+                if (a) {
+                    if (c1.length > 7) {
+                        f = c1.split(","); if (f.length < 3 || f.length > 4) return null;
+                        c1 = [parseInt(f[0].split("(")[1]), parseInt(f[1]), parseInt(f[2])]; if (f.length == 4) c1.push(parseFloat(f[3]));
+                    } else if (c1.length == 4) {
+                        if (c1[0] != "#") return null; c1 = [parseInt(c1.slice(1, 2) + c1.slice(1, 2), 16), parseInt(c1.slice(2, 3) + c1.slice(2, 3), 16), parseInt(c1.slice(3, 4) + c1.slice(3, 4), 16)];
+                    } else {
+                        if (c1[0] != "#") return null; c1 = [parseInt(c1.slice(1, 3), 16), parseInt(c1.slice(3, 5), 16), parseInt(c1.slice(5, 7), 16)];
+                    }
+                }
+                h = c0.length > 3; P = (p < 0); if (P) p = -p; t = p;
+                if (!a || l) {
+                    P = m(c0[0] * (1 - p)); if (P > 255) P = 255; if (P < 0) P = 0; r = P;
+                    P = m(c0[1] * (1 - p)); if (P > 255) P = 255; if (P < 0) P = 0; g = P;
+                    P = m(c0[2] * (1 - p)); if (P > 255) P = 255; if (P < 0) P = 0; b = P;
+                } else {
+                    P = m(c0[0] + (c1[0] - c0[0]) * p); if (P > 255) P = 255; if (P < 0) P = 0; r = P;
+                    P = m(c0[1] + (c1[1] - c0[1]) * p); if (P > 255) P = 255; if (P < 0) P = 0; g = P;
+                    P = m(c0[2] + (c1[2] - c0[2]) * p); if (P > 255) P = 255; if (P < 0) P = 0; b = P;
+                }
+                if (h) return "rgba(" + r + "," + g + "," + b + "," + c0[3] + ")";
+                else return "#" + (r.toString(16).length == 1 ? "0" + r.toString(16) : r.toString(16)) + (g.toString(16).length == 1 ? "0" + g.toString(16) : g.toString(16)) + (b.toString(16). * length == 1 ? "0" + b.toString(16) : b.toString(16));
+            }
+            function getContrastYIQ(hex){
+                if(hex.length > 7) hex = hex.slice(0,7);
+                if(hex.length === 4) hex = "#" + hex.slice(1,2) + hex.slice(1,2) + hex.slice(2,3) + hex.slice(2,3) + hex.slice(3,4) + hex.slice(3,4);
+                let r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
+                let yiq = ((r*299)+(g*587)+(b*114))/1000;
+                return (yiq >= 128) ? '#000000' : '#ffffff';
+            }
+
+            // --- Initialzation ---
+            function init() {
+                loadState();
+                applySettings();
+                renderSidebarList();
+                renderMainPanel();
+                
+                // NEW: Sync setting with backend on first load
+                syncAutoStartSetting(state.settings.autoStart);
+
+                // Attach event listeners
+                shortcutListUI.addEventListener('click', handleSidebarClick);
+                navSettings.addEventListener('click', handleNavClick);
+                navAddShortcut.addEventListener('click', handleNavClick);
+                mainPanel.addEventListener('click', handleMainPanelClick);
+                mainPanel.addEventListener('submit', handleFormSubmit);
+                mainPanel.addEventListener('input', handleSettingsFormChange);
+                modalCloseBtn.addEventListener('click', hideNotification);
+                modalCloseIcon.addEventListener('click', hideNotification);
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                else console.warn('Lucide icons not loaded.');
+            }
+
+            init();
+        });
+    </script>
+
+</body>
+</html>

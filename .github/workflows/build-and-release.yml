@@ -1,0 +1,66 @@
+# This is your GitHub Actions pipeline.
+# It will automatically build and release your Electron app for all 3 OSes.
+
+name: Build & Release
+
+# This pipeline runs ONLY when you create a new "Release" on GitHub.
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-release:
+    name: Build on ${{ matrix.os-name }}
+    
+    # Use a matrix to run this job on all 3 operating systems
+    strategy:
+      matrix:
+        include:
+          - os-name: Windows
+            os: windows-latest
+            build_cmd: 'npm run pack:win'
+            artifact_glob: 'dist/*.exe'
+
+          - os-name: macOS
+            os: macos-latest
+            build_cmd: 'npm run pack:mac'
+            artifact_glob: 'dist/*.dmg'
+
+          - os-name: Linux
+            os: ubuntu-latest
+            build_cmd: 'npm run pack:linux'
+            artifact_glob: 'dist/*.AppImage'
+
+    # Set the runner for the job
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # 1. Get your code from the repo
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # 2. Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use a recent LTS version
+
+      # 3. Install your dependencies (electron, electron-builder)
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Build the app (e.g., "npm run pack:win")
+      - name: Build app
+        run: ${{ matrix.build_cmd }}
+        env:
+          # This is required for macOS builds on GitHub Actions
+          # It disables code signing, which would otherwise fail.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          
+      # 5. Upload the built file (.exe, .dmg, .AppImage) to the release
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          # This finds the built file in the /dist folder
+          files: ${{ matrix.artifact_glob }}
+          token: ${{ secrets.GITHUB_TOKEN }} # This token is automatic, no setup needed.
