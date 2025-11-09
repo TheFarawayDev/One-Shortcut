@@ -669,7 +669,7 @@
                     P = m(c0[2] + (c1[2] - c0[2]) * p); if (P > 255) P = 255; if (P < 0) P = 0; b = P;
                 }
                 if (h) return "rgba(" + r + "," + g + "," + b + "," + c0[3] + ")";
-                else return "#" + (r.toString(16).length == 1 ? "0" + r.toString(16) : r.toString(16)) + (g.toString(16).length == 1 ? "0" + g.toString(16) : g.toString(16)) + (b.toString(16). * length == 1 ? "0" + b.toString(16) : b.toString(16));
+                else return "#" + (r.toString(16).length == 1 ? "0" + r.toString(16) : r.toString(16)) + (g.toString(16).length == 1 ? "0" + g.toString(16) : g.toString(16)) + (b.toString(16).length == 1 ? "0" + b.toString(16) : b.toString(16));
             }
             function getContrastYIQ(hex){
                 if(hex.length > 7) hex = hex.slice(0,7);
