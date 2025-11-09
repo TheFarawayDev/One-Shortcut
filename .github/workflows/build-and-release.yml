@@ -65,6 +65,11 @@ jobs:
           # It disables code signing, which would otherwise fail.
           CSC_IDENTITY_AUTO_DISCOVERY: false
           
+          # FIX: Pass the GitHub token to electron-builder
+          # This prevents the "GH_TOKEN is not set" error by allowing
+          # electron-builder to talk to the GitHub API.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       # 6. Upload the built file (.exe, .dmg, .AppImage) to the release
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
